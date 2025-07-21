@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <title>VR Controller Shooting</title>
-  <base href="./"> <!-- ★追加：相対パス安定用 -->
+  <base href="/PR_Project/"> <!-- ★追加：相対パス安定用 -->
   <script src="https://aframe.io/releases/1.6.0/aframe.min.js"></script>
   <script>
     let score = 0;
