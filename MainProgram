@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8" />
+<title>VR Controller Shooting</title>
+<script src="https://aframe.io/releases/1.6.0/aframe.min.js"></script>
+<script>
+    let score = 0;
+    let timeLeft = 60; // ゲームの制限時間（秒）
+    let timerInterval;
+    let gameStarted = false; // ゲームが開始されているかどうかのフラグ
+    // スコアを更新する関数
+    function updateScore() {
+        const scoreText = document.getElementById('score-text');
+        scoreText.setAttribute('text', `value: Score: ${score}`);
+        // スコアが1以上でタイマーを開始
+        if (score == 1 && !gameStarted) {
+            startGame();
+        }
+    }
+    // タイマーを更新する関数
+    function updateTimer() {
+        const timerText = document.getElementById('timer-text');
+        timerText.setAttribute('text', `value: Time: ${timeLeft}s`);
+    }
+    // ゲーム開始の関数
+    function startGame() {
+        if (gameStarted) return; // ゲームが既に開始されていれば何もしない
+        gameStarted = true;
+        // ゲームの状態をリセットする
+        score = 0;
+        timeLeft = 60;
+        updateScore();
+        updateTimer();
+        const startButton = document.getElementById('start-button');
+        startButton.setAttribute('visible', 'false'); // スタートボタンを非表示
+        // タイマーを開始する
+        timerInterval = setInterval(() => {
+            if (timeLeft > 0) {
+                timeLeft -= 1;
+                updateTimer();
+            } else {
+                endGame();
+            }
+        }, 1000);
+    }
+    //ゲーム終了の関数
+    function endGame() {
+      clearInterval(timerInterval); // タイマーを停止
+      const endMessage = document.createElement('a-entity');
+      endMessage.setAttribute('text', 'value: Game Over!; color: red; align: center;');
+      endMessage.setAttribute('position', '0 2 -4');
+      const scene = document.querySelector('a-scene');
+      scene.appendChild(endMessage);
+      // 追加でゲームのリセットや再スタートボタンの表示を行う
+      // 例: スタートボタンを再表示する
+      const startButton = document.getElementById('start-button');
+      startButton.setAttribute('visible', 'true');
+    }
+    function createTarget(scene, position) {
+        const targetTypes = [
+            'https://cdn.glitch.global/59500ef5-d760-4701-b2cc-8e08a9082797/%E7%9A%84%E3%80%80%E6%94%B9.glb?v=1733898969880',
+            'https://cdn.glitch.global/59500ef5-d760-4701-b2cc-8e08a9082797/%E9%A1%94%E4%BF%AE%E6%AD%A3%E7%89%88.glb?v=1734501418138',
+            'https://cdn.glitch.global/59500ef5-d760-4701-b2cc-8e08a9082797/%E7%9A%84%E3%80%80%E6%94%B9.glb?v=1733898969880'
+        ];
+        // ランダムにターゲットの種類を選択
+        const randomModel = targetTypes[Math.floor(Math.random() * targetTypes.length)];
+        const target = document.createElement('a-entity');
+        target.setAttribute('gltf-model', randomModel);
+        target.setAttribute('position', `${position.x} ${position.y} ${position.z}`);
+        target.setAttribute('scale', '1 1 1');
+        target.setAttribute('animation', `property: position; dir: alternate; to: ${position.x} ${position.y + 5} ${position.z}; loop: true; dur: 3000`);
+        target.setAttribute('collision-check', '');
+        target.setAttribute('sync-collision-box', '');
+        // 衝突判定用のボックス
+        const collisionBox = document.createElement('a-box');
+        collisionBox.setAttribute('class', 'collision-box');
+        collisionBox.setAttribute('position', '0 1 0');
+        collisionBox.setAttribute('scale', '2 2 2');
+        collisionBox.setAttribute('visible', 'false');
+        target.appendChild(collisionBox);
+        scene.appendChild(target);
+    }
+    AFRAME.registerComponent('spawn-and-move', {
+        init: function () {
+            let isCooldown = false; // クールタイムのフラグ
+ 
+            this.el.addEventListener('triggerdown', (event) => {
+                if (isCooldown) return; // クールタイム中は発射しない
+ 
+                const controller = event.target;
+                const position = controller.getAttribute('position');
+                const direction = new THREE.Vector3();
+                controller.object3D.getWorldDirection(direction); // コントローラーの向きを取得
+ 
+                // 発射方向を反転
+                direction.negate(); // 反転させる
+ 
+                // 球を生成し、発射する
+                const sphere = document.createElement('a-sphere');
+                sphere.setAttribute('position', position);
+                sphere.setAttribute('radius', 0.7);
+                sphere.setAttribute('color', this.getRandomColor());
+                sphere.classList.add('movable');
+ 
+                // 発射方向をセット
+                sphere.setAttribute('move-in-direction', {
+                    dirX: direction.x,
+                    dirY: direction.y,
+                    dirZ: direction.z
+                });
+ 
+                const scene = document.querySelector('a-scene');
+                scene.appendChild(sphere);
+ 
+                setTimeout(() => {
+                    scene.removeChild(sphere);
+                }, 5000);
+ 
+                // クールタイムを開始
+                isCooldown = true;
+                setTimeout(() => {
+                    isCooldown = false; // 1秒後にクールタイム解除
+                }, 1000);
+            });
+        },
+        getRandomColor: function () {
+            const letters = '0123456789ABCDEF';
+            let color = '#';
+            for (let i = 0; i < 6; i++) {
+                color += letters[Math.floor(Math.random() * 16)];
+            }
+            return color;
+        }
+    });
+    AFRAME.registerComponent('move-in-direction', {
+        schema: {
+            dirX: { type: 'number', default: 0 },
+            dirY: { type: 'number', default: 0 },
+            dirZ: { type: 'number', default: 0 }
+        },
+        tick: function () {
+            const position = this.el.object3D.position;
+            const direction = new THREE.Vector3(
+                this.data.dirX,
+                this.data.dirY,
+                this.data.dirZ
+            );
+            const speed = 0.2;
+            position.add(direction.multiplyScalar(speed));
+        }
+    });
+    AFRAME.registerComponent('collision-check', {
+        tick: function () {
+            const movableObjects = document.querySelectorAll('.movable');
+            const target = this.el.object3D;
+            const scene = document.querySelector('a-scene');
+            movableObjects.forEach((sphereEl) => {
+                const sphere = sphereEl.object3D;
+                const collisionBoxEl = this.el.querySelector('.collision-box');
+ 
+                if (collisionBoxEl) {
+                    const targetBox = collisionBoxEl.object3D;
+                    const distance = sphere.position.distanceTo(targetBox.position);
+ 
+                    if (distance < 2.0) {
+                        sphereEl.parentNode.removeChild(sphereEl);
+                        this.el.parentNode.removeChild(this.el);
+ 
+                        // ターゲットのモデルURLを確認
+                        const targetModel = this.el.getAttribute('gltf-model');
+                        // スコアを加算
+                        score += 1;
+ 
+                        // targetTypes が特定のURLのときに追加で1点加算
+                        const additionalPointsUrl = 'https://cdn.glitch.global/59500ef5-d760-4701-b2cc-8e08a9082797/%E9%A1%94%E4%BF%AE%E6%AD%A3%E7%89%88.glb?v=1734501418138';
+                        if (targetModel === additionalPointsUrl) {
+                            score += 1;
+                        }
+ 
+                        updateScore();
+ 
+                        // 新しいターゲットを生成
+                        const newPosition = {
+                            x: (Math.random() * 8) - 4,
+                            y: (Math.random() * 6) - 3,
+                            z: (Math.random() * -15) - 4
+                        };
+                        createTarget(scene, newPosition);
+                    }
+                }
+            });
+        }
+    });
+    AFRAME.registerComponent('sync-collision-box', {
+        init: function () {
+            this.target = this.el;
+            this.collisionBox = this.el.querySelector('.collision-box');
+        },
+        tick: function () {
+            if (this.target && this.collisionBox) {
+                const targetPosition = this.target.object3D.position;
+                this.collisionBox.object3D.position.set(targetPosition.x, targetPosition.y, targetPosition.z);
+            }
+        }
+    });
+</script>
+<script src="https://cdn.jsdelivr.net/gh/donmccurdy/aframe-extras@v6.1.1/dist/aframe-extras.min.js"></script>
+</head>
+<body>
+<a-scene>
+<a-entity camera look-controls position="0 1.6 0" visible="false"></a-entity>
+<!-- VRコントローラー -->
+<a-entity id="controller-left" 
+              laser-controls="hand: left" 
+              position="0 1.5 0" 
+              spawn-and-move>
+</a-entity>
+<a-entity id="controller-right" 
+              laser-controls="hand: right" 
+              position="0 1.5 0" 
+              spawn-and-move>
+</a-entity>
+<!-- スタートボタン -->
+<a-box id="start-button" position="0 1 -5" width="2" height="0.5" depth="1" color="#45A265" onclick="startGame()">
+<a-text value="Start Game" position="0 0 0.51" color="white" align="center" font="dejavu"></a-text>
+</a-box>
+<!-- 目標物 -->
+<a-entity id="faceTarget1"
+              gltf-model="https://cdn.glitch.global/59500ef5-d760-4701-b2cc-8e08a9082797/%E7%9A%84%E3%80%80%E6%94%B9.glb?v=1733898969880"
+              position="-4 3 -7"
+              scale="1 1 1"
+              animation="property: position; dir: alternate; to: -4 -5 -7; loop: true; dur: 3000"
+              collision-check
+              sync-collision-box>
+<a-box class="collision-box" position="0 1 0" scale="2 2 2" visible="false"></a-box>
+</a-entity>
+<a-entity id="faceTarget2"
+              gltf-model="https://cdn.glitch.global/59500ef5-d760-4701-b2cc-8e08a9082797/%E7%9A%84%E3%80%80%E6%94%B9.glb?v=1733898969880"
+              position="0 -3 -7"
+              scale="1 1 1"
+              animation="property: position; dir: alternate; to: 0 5 -7; loop: true; dur: 2000"
+              collision-check
+              sync-collision-box>
+<a-box class="collision-box" position="0 1 0" scale="2 2 2" visible="false"></a-box>
+</a-entity>
+<a-entity id="faceTarget3"
+              gltf-model="https://cdn.glitch.global/59500ef5-d760-4701-b2cc-8e08a9082797/%E7%9A%84%E3%80%80%E6%94%B9.glb?v=1733898969880"
+              position="4 1 -7"
+              scale="1 1 1"
+              animation="property: position; dir: alternate; to: 4 5 -7; loop: true; dur: 5000"
+              collision-check
+              sync-collision-box>
+<a-box class="collision-box" position="0 1 0" scale="2 2 2" visible="false"></a-box>
+</a-entity>
+<a-entity id="score-text" 
+          position="0 4 -4" 
+          geometry="primitive: plane; width: 5" 
+          material="color: #EF2D5E; transparent: true; opacity: 0.5" 
+          text="color: white; align: center; font: dejavu; value: Score: 0;">
+</a-entity>
+<!-- タイマー表示 -->
+<a-entity id="timer-text" 
+          position="0 3 -4" 
+          geometry="primitive: plane; width: 5" 
+          material="color: #EF2D5E; transparent: true; opacity: 0.5" 
+          text="color: white; align: center; font: dejavu; value: Time: 60s;">
+</a-entity>
+<a-sky color="lightblue"></a-sky>
+</a-scene>
+</body>
+</html>
