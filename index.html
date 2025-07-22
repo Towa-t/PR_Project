@@ -3,8 +3,9 @@
 <head>
   <meta charset="UTF-8" />
   <title>VR Controller Shooting</title>
-  <base href="/PR_Project/"> <!-- ★追加：相対パス安定用 -->
+  <base href="./"> <!-- GitHub Pages上の相対パス安定用 -->
   <script src="https://aframe.io/releases/1.6.0/aframe.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/gh/donmccurdy/aframe-extras@v6.1.1/dist/aframe-extras.min.js"></script>
   <script>
     let score = 0;
     let timeLeft = 60;
@@ -14,9 +15,7 @@
     function updateScore() {
       const scoreText = document.getElementById('score-text');
       scoreText.setAttribute('text', `value: Score: ${score}`);
-      if (score == 1 && !gameStarted) {
-        startGame();
-      }
+      if (score === 1 && !gameStarted) startGame();
     }
 
     function updateTimer() {
@@ -35,7 +34,7 @@
 
       timerInterval = setInterval(() => {
         if (timeLeft > 0) {
-          timeLeft -= 1;
+          timeLeft--;
           updateTimer();
         } else {
           endGame();
@@ -54,9 +53,9 @@
 
     function createTarget(scene, position) {
       const targetTypes = [
-        './face.glb',   // ★変更済み：GitHubローカルパス
-        './target.glb',  // ★変更済み
-        './target1.glb'   // ★変更済み
+        './model/target.glb',
+        './model/face.glb',
+        './model/target.glb'
       ];
       const randomModel = targetTypes[Math.floor(Math.random() * targetTypes.length)];
       const target = document.createElement('a-entity');
@@ -79,10 +78,8 @@
     AFRAME.registerComponent('spawn-and-move', {
       init: function () {
         let isCooldown = false;
-
         this.el.addEventListener('triggerdown', (event) => {
           if (isCooldown) return;
-
           const controller = event.target;
           const position = controller.getAttribute('position');
           const direction = new THREE.Vector3();
@@ -94,7 +91,6 @@
           sphere.setAttribute('radius', 0.7);
           sphere.setAttribute('color', this.getRandomColor());
           sphere.classList.add('movable');
-
           sphere.setAttribute('move-in-direction', {
             dirX: direction.x,
             dirY: direction.y,
@@ -103,38 +99,23 @@
 
           const scene = document.querySelector('a-scene');
           scene.appendChild(sphere);
-
-          setTimeout(() => {
-            scene.removeChild(sphere);
-          }, 5000);
+          setTimeout(() => scene.removeChild(sphere), 5000);
 
           isCooldown = true;
-          setTimeout(() => {
-            isCooldown = false;
-          }, 1000);
+          setTimeout(() => isCooldown = false, 1000);
         });
       },
       getRandomColor: function () {
-        const letters = '0123456789ABCDEF';
-        let color = '#';
-        for (let i = 0; i < 6; i++) {
-          color += letters[Math.floor(Math.random() * 16)];
-        }
-        return color;
+        return '#' + Math.floor(Math.random() * 16777215).toString(16);
       }
     });
 
     AFRAME.registerComponent('move-in-direction', {
-      schema: {
-        dirX: { type: 'number', default: 0 },
-        dirY: { type: 'number', default: 0 },
-        dirZ: { type: 'number', default: 0 }
-      },
+      schema: { dirX: { type: 'number' }, dirY: { type: 'number' }, dirZ: { type: 'number' } },
       tick: function () {
         const position = this.el.object3D.position;
-        const direction = new THREE.Vector3(this.data.dirX, this.data.dirY, this.data.dirZ);
-        const speed = 0.2;
-        position.add(direction.multiplyScalar(speed));
+        const dir = new THREE.Vector3(this.data.dirX, this.data.dirY, this.data.dirZ);
+        position.add(dir.multiplyScalar(0.2));
       }
     });
 
@@ -146,21 +127,16 @@
         movableObjects.forEach((sphereEl) => {
           const sphere = sphereEl.object3D;
           const collisionBoxEl = this.el.querySelector('.collision-box');
-
           if (collisionBoxEl) {
             const targetBox = collisionBoxEl.object3D;
             const distance = sphere.position.distanceTo(targetBox.position);
-
             if (distance < 2.0) {
               sphereEl.parentNode.removeChild(sphereEl);
               this.el.parentNode.removeChild(this.el);
 
               const targetModel = this.el.getAttribute('gltf-model');
               score += 1;
-
-              if (targetModel === 'models/face.glb') { // ★条件も変更
-                score += 1;
-              }
+              if (targetModel.includes('face.glb')) score += 1;
 
               updateScore();
 
@@ -183,52 +159,49 @@
       },
       tick: function () {
         if (this.target && this.collisionBox) {
-          const targetPosition = this.target.object3D.position;
-          this.collisionBox.object3D.position.set(targetPosition.x, targetPosition.y, targetPosition.z);
+          const pos = this.target.object3D.position;
+          this.collisionBox.object3D.position.set(pos.x, pos.y, pos.z);
         }
       }
     });
   </script>
-  <script src="https://cdn.jsdelivr.net/gh/donmccurdy/aframe-extras@v6.1.1/dist/aframe-extras.min.js"></script>
 </head>
 <body>
 <a-scene>
   <a-entity camera look-controls position="0 1.6 0" visible="false"></a-entity>
 
-  <!-- コントローラー -->
   <a-entity id="controller-left" laser-controls="hand: left" position="0 1.5 0" spawn-and-move></a-entity>
   <a-entity id="controller-right" laser-controls="hand: right" position="0 1.5 0" spawn-and-move></a-entity>
 
-  <!-- スタートボタン -->
   <a-box id="start-button" position="0 1 -5" width="2" height="0.5" depth="1" color="#45A265" onclick="startGame()">
     <a-text value="Start Game" position="0 0 0.51" color="white" align="center" font="dejavu"></a-text>
   </a-box>
 
-  <!-- ターゲット（初期配置） -->
-  <a-entity gltf-model="./face.glb" position="-4 3 -7" scale="1 1 1"
+  <!-- 初期ターゲット -->
+  <a-entity gltf-model="./model/target.glb" position="-4 3 -7" scale="1 1 1"
             animation="property: position; dir: alternate; to: -4 -5 -7; loop: true; dur: 3000"
             collision-check sync-collision-box>
     <a-box class="collision-box" position="0 1 0" scale="2 2 2" visible="false"></a-box>
   </a-entity>
 
-  <a-entity gltf-model="./target.glb" position="0 -3 -7" scale="1 1 1"
+  <a-entity gltf-model="./model/face.glb" position="0 -3 -7" scale="1 1 1"
             animation="property: position; dir: alternate; to: 0 5 -7; loop: true; dur: 2000"
             collision-check sync-collision-box>
     <a-box class="collision-box" position="0 1 0" scale="2 2 2" visible="false"></a-box>
   </a-entity>
 
-  <a-entity gltf-model="./target.glb" position="4 1 -7" scale="1 1 1"
+  <a-entity gltf-model="./model/target.glb" position="4 1 -7" scale="1 1 1"
             animation="property: position; dir: alternate; to: 4 5 -7; loop: true; dur: 5000"
             collision-check sync-collision-box>
     <a-box class="collision-box" position="0 1 0" scale="2 2 2" visible="false"></a-box>
   </a-entity>
 
-  <!-- スコアとタイマー -->
   <a-entity id="score-text" position="0 4 -4"
             geometry="primitive: plane; width: 5"
             material="color: #EF2D5E; transparent: true; opacity: 0.5"
             text="color: white; align: center; font: dejavu; value: Score: 0;">
   </a-entity>
+
   <a-entity id="timer-text" position="0 3 -4"
             geometry="primitive: plane; width: 5"
             material="color: #EF2D5E; transparent: true; opacity: 0.5"
