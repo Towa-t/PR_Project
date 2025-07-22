@@ -54,9 +54,9 @@
 
     function createTarget(scene, position) {
       const targetTypes = [
-        'models/face.glb',   // ★変更済み：GitHubローカルパス
-        'models/target.glb',  // ★変更済み
-        'models/target1.glb'   // ★変更済み
+        './face.glb',   // ★変更済み：GitHubローカルパス
+        './target.glb',  // ★変更済み
+        './target1.glb'   // ★変更済み
       ];
       const randomModel = targetTypes[Math.floor(Math.random() * targetTypes.length)];
       const target = document.createElement('a-entity');
@@ -205,19 +205,19 @@
   </a-box>
 
   <!-- ターゲット（初期配置） -->
-  <a-entity gltf-model="models/face.glb" position="-4 3 -7" scale="1 1 1"
+  <a-entity gltf-model="./face.glb" position="-4 3 -7" scale="1 1 1"
             animation="property: position; dir: alternate; to: -4 -5 -7; loop: true; dur: 3000"
             collision-check sync-collision-box>
     <a-box class="collision-box" position="0 1 0" scale="2 2 2" visible="false"></a-box>
   </a-entity>
 
-  <a-entity gltf-model="models/target.glb" position="0 -3 -7" scale="1 1 1"
+  <a-entity gltf-model="./target.glb" position="0 -3 -7" scale="1 1 1"
             animation="property: position; dir: alternate; to: 0 5 -7; loop: true; dur: 2000"
             collision-check sync-collision-box>
     <a-box class="collision-box" position="0 1 0" scale="2 2 2" visible="false"></a-box>
   </a-entity>
 
-  <a-entity gltf-model="models/target1.glb" position="4 1 -7" scale="1 1 1"
+  <a-entity gltf-model="./target.glb" position="4 1 -7" scale="1 1 1"
             animation="property: position; dir: alternate; to: 4 5 -7; loop: true; dur: 5000"
             collision-check sync-collision-box>
     <a-box class="collision-box" position="0 1 0" scale="2 2 2" visible="false"></a-box>
