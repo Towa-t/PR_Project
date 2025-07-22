@@ -62,6 +62,7 @@
       target.setAttribute('gltf-model', randomModel);
       target.setAttribute('position', `${position.x} ${position.y} ${position.z}`);
       target.setAttribute('scale', '1 1 1');
+      target.setAttribute('rotation', '0 180 0');
       target.setAttribute('animation', `property: position; dir: alternate; to: ${position.x} ${position.y + 5} ${position.z}; loop: true; dur: 3000`);
       target.setAttribute('collision-check', '');
       target.setAttribute('sync-collision-box', '');
