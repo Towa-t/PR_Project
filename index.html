@@ -15,7 +15,7 @@
     function updateScore() {
       const scoreText = document.getElementById('score-text');
       scoreText.setAttribute('text', `value: Score: ${score}`);
-      if (score === 1 && !gameStarted) startGame();
+      if (score >= 1 && !gameStarted) startGame();
     }
 
     function updateTimer() {
